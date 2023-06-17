@@ -1,72 +1,149 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import './index.css'
+import './App.css';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
 
-const guns = ['강화군', '동구', '미추홀구', '연수구', '남동구']
-const days = ['1', '2', '3', '4', '5']
+const terminals = ['T1', 'T2']
 
-function fetchData(gun, day) {
-  const endPoint = 'https://api.odcloud.kr/api/15067973/v1/uddi:2a956a34-b2cb-413c-8177-f0b86e3dcd69?page=1&perPage=10&serviceKey=VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%3D'
-  const serviceKey = process.env.REACT_APP_SERVICE_KEY;
-  const type = 'json'
-  const numOfRows = 10
-  const pageNo = 1
+function fetchData(terminal) {
 
-  const promise = fetch(`${endPoint}?serviceKey=${serviceKey}&type=${type}&numOfRows=${numOfRows}&pageNo=${pageNo}`)
+  const endPoint = 'http://apis.data.go.kr/B551177/StatusOfArrivals/getArrivalsCongestion'
+  const serviceKey = 'VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%3D';
+  const type = 'json';
+  const numOfRows = 10;
+  const pageNo = 1;
+
+  const promise = fetch(`${endPoint}?serviceKey=${serviceKey}&terno=${terminal}&type=${type}&numOfRows=${numOfRows}&pageNo=${pageNo}`)
     .then(res => {
-      if (!res.ok) { 
+      if (!res.ok) {
         throw res;
       }
       return res.json();
     })
 
-  return promise
+  return promise;
 }
 
 export default function App() {
-  const [gun, setGun] = useState(guns[0])
-  const [day, setDay] = useState(days[0])
+
+  const [terminal, setTerminal] = useState(terminals[0])
+  const [entrygate, setEntrygate] = useState()
+  const [data, setData] = useState([])
 
   return (
     <>
-      <h1 className='flex justify-center text-2xl font-semibold mt-2'>인천광역시 이음카드 매출현황</h1>
-      <div className='flex justify-end mt-4'>
-        <select className="flex justify-end items-end h-8 w-32 text-lg border border-gray-300 mr-4 items-center"
-          onChange={(e) => setGun(e.target.value)}>
-          {guns.map(gun => (
-            <option key={gun} value={gun}>{gun}</option>
+      <h1 className='text-center py-12 text-2xl font-semibold'>입국장별 대기인원</h1>
+      <div id="select-terminal" className="flex w-64 justify-between float-right mr-4 mt-2">
+        <select className="border border-gray-300 w-28 h-8 text-lg"
+          onChange={(e) => setTerminal(e.target.value)}>
+          {terminals.map(terminal => (
+            <option key={terminal} value={terminal}>{terminal}</option>
           ))}
         </select>
-        <select className="h-8 w-32 text-lg border border-gray-300 mr-4"
-          onChange={(e) => setDay(e.target.value)}>
-          {days.map(day => (
-            <option key={day} value={day}>{day}</option>
-          ))}
+        <select className="border border-gray-300 w-28 h-8 text-lg"
+          onChange={(e) => setEntrygate(e.target.value)}>
+         <option key={entrygate} value={entrygate}>{entrygate}</option>
         </select>
       </div>
-
-      <Dashboard gun={gun} day={day}/>
+            
+      <Dashboard terminal={terminal} />
     </>
   )
 }
 
-function Dashboard({gun, day}){
-  const [data, setData] = useState(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [error, setError] = useState(null)
+function Dashboard({ terminal }) {
 
-  useEffect(() =>{
-    setIsLoaded(false); 
+  const [data, setData] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+
+    setIsLoaded(false);
     setError(null);
 
-    fetchData(gun, day)
-    .then(data => {
-      console.log(data)
-      setData(data);
-    })
-    .catch(error =>{
-      setError(error)
-    })
-    .finally(() => setIsLoaded(true))
-  })
-    
+    fetchData(terminal)
+      .then(data => {
+        console.log(data)
+        setData(data);
+      })
+      .catch(error => {
+        setError(error);
+      })
+      .finally(() => setIsLoaded(true));
+
+  }, [terminal])
+
+  if (error) {
+    return <p>failed to fetch</p>
+  }
+
+  if (!isLoaded) {
+    return <p>fetching data...</p>
+  }
+
+  return (
+    <>
+      <h2>{terminal} 승객 조회 결과</h2>
+
+      {data.korea > 0 ? (
+        <>
+          <Rechart complicate={data.items.item} />
+
+        </>
+      ) : (
+        <p>자료가 없습니다</p>
+      )}
+    </>
+  )
 }
+
+
+function Rechart({ complicates }) {
+
+  const chartData = complicates.map(complicate => {
+
+    return {
+      국내인: complicate.korean,
+      외국인: complicate.foreigner,
+    }
+  })
+
+  return (
+    <div className="h={300px}">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          width={500}
+          height={300}
+          data={chartData}
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="국내인" fill="#FF0060" />
+          <Bar dataKey="외국인" fill="#F6FA70" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+
+
+
