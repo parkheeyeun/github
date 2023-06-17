@@ -16,7 +16,7 @@ const terminals = ['T1', 'T2']
 function fetchData(terminal) {
 
   const endPoint = 'http://apis.data.go.kr/B551177/StatusOfArrivals/getArrivalsCongestion'
-  const serviceKey = 'VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%3D';
+  const serviceKey = 'VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%';
   const type = 'json';
   const numOfRows = 10;
   const pageNo = 1;
