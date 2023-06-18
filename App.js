@@ -11,17 +11,29 @@ import {
   ResponsiveContainer
 } from "recharts";
 
-const terminals = ['T1', 'T2']
 
-function fetchData(terminal) {
+const incheon = [
+  { siDo: 28, goGun: 245, name: '계양구' },
+  { siDo: 28, goGun: 200, name: '남동구' },
+  { siDo: 28, goGun: 140, name: '동구' },
+  { siDo: 28, goGun: 177, name: '미추홀구' },
+  { siDo: 28, goGun: 237, name: '부평구' },
+  { siDo: 28, goGun: 260, name: '서구' },
+  { siDo: 28, goGun: 185, name: '연수구' },
+  { siDo: 28, goGun: 110, name: '중구' },
+]
 
-  const endPoint = 'http://apis.data.go.kr/B551177/StatusOfArrivals/getArrivalsCongestion'
-  const serviceKey = 'VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%';
+const years = [2020, 2021, 2022]
+
+function fetchData(city, year) {
+
+  const endPoint = 'http://apis.data.go.kr/B552061/schoolzoneChild/getRestSchoolzoneChild'
+  const serviceKey = process.env.REACT_APP_SERVICE_KEY;
   const type = 'json';
   const numOfRows = 10;
   const pageNo = 1;
 
-  const promise = fetch(`${endPoint}?serviceKey=${serviceKey}&terno=${terminal}&type=${type}&numOfRows=${numOfRows}&pageNo=${pageNo}`)
+  const promise = fetch(`${endPoint}?serviceKey=${serviceKey}&searchYearCd=${year}&siDo=${city.siDo}&guGun=${city.goGun}&type=${type}&numOfRows=${numOfRows}&pageNo=${pageNo}`)
     .then(res => {
       if (!res.ok) {
         throw res;
@@ -34,32 +46,35 @@ function fetchData(terminal) {
 
 export default function App() {
 
-  const [terminal, setTerminal] = useState(terminals[0])
-  const [entrygate, setEntrygate] = useState()
-  const [data, setData] = useState([])
+  const [year, setYear] = useState(years[0]);
+  const [city, setCity] = useState(incheon[0]);
 
   return (
     <>
-      <h1 className='text-center py-12 text-2xl font-semibold'>입국장별 대기인원</h1>
-      <div id="select-terminal" className="flex w-64 justify-between float-right mr-4 mt-2">
-        <select className="border border-gray-300 w-28 h-8 text-lg"
-          onChange={(e) => setTerminal(e.target.value)}>
-          {terminals.map(terminal => (
-            <option key={terminal} value={terminal}>{terminal}</option>
+      <h1 className='text-center py-8 text-2xl font-semibold'>인천 스쿨존 사고조회</h1>
+      <div id="select-year" className='w-full ml-4 my-4'>
+        <select className='border border-gray-300 w-28 h-8 text-lg' onChange={(e) => setYear(e.target.value)}>
+          {years.map(year => (
+            <option key={year} value={year}>{year}</option>
           ))}
         </select>
-        <select className="border border-gray-300 w-28 h-8 text-lg"
-          onChange={(e) => setEntrygate(e.target.value)}>
-         <option key={entrygate} value={entrygate}>{entrygate}</option>
-        </select>
       </div>
-            
-      <Dashboard terminal={terminal} />
+      <div className='flex justify-center'>
+        {incheon.map(city => (
+          <button className='border-2 border-black rounded p-4 m-1 hover:bg-sky-300'
+            key={city.id}
+            onClick={() => setCity(city)}
+          >
+            {city.name}
+          </button>
+        ))}
+      </div>
+      <Dashboard city={city} year={year} />
     </>
   )
 }
 
-function Dashboard({ terminal }) {
+function Dashboard({ city, year }) {
 
   const [data, setData] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -70,7 +85,7 @@ function Dashboard({ terminal }) {
     setIsLoaded(false);
     setError(null);
 
-    fetchData(terminal)
+    fetchData(city, year)
       .then(data => {
         console.log(data)
         setData(data);
@@ -80,24 +95,22 @@ function Dashboard({ terminal }) {
       })
       .finally(() => setIsLoaded(true));
 
-  }, [terminal])
+  }, [city, year])
 
   if (error) {
-    return <p>failed to fetch</p>
+    return <p className='mt-4 ml-4'>failed to fetch</p>
   }
 
   if (!isLoaded) {
-    return <p>fetching data...</p>
+    return <p className='mt-4 ml-4'>fetching data...</p>
   }
 
   return (
     <>
-      <h2>{terminal} 승객 조회 결과</h2>
-
-      {data.korea > 0 ? (
+      <h1>{year}년 {city.name} 사고조회 결과</h1>
+      {data.totalCount > 0 ? (
         <>
-          <Rechart complicate={data.items.item} />
-
+          <Rechart accidents={data.items.item} />
         </>
       ) : (
         <p>자료가 없습니다</p>
@@ -106,44 +119,37 @@ function Dashboard({ terminal }) {
   )
 }
 
-
-function Rechart({ complicates }) {
-
-  const chartData = complicates.map(complicate => {
+function Rechart({ accidents }) {
+  const chartData = accidents.map(accident => {
 
     return {
-      국내인: complicate.korean,
-      외국인: complicate.foreigner,
+      name: accident.spot_nm.split(' '),
+      발생건수: accident.occrrnc_cnt,
+      중상자수: accident.se_dnv_cnt,
+      사망자수: accident.dth_dnv_cnt
     }
   })
 
   return (
-    <div className="h={300px}">
+    <div style={{ height: "300px" }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           width={500}
           height={300}
           data={chartData}
-          margin={{
-            top: 5,
-            right: 30,
-            left: 20,
-            bottom: 5
-          }}
+          margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="국내인" fill="#FF0060" />
-          <Bar dataKey="외국인" fill="#F6FA70" />
+          <Bar dataKey="발생건수" fill="#009966" />
+          <Bar dataKey="중상자수" fill="#ffcb05" />
+          <Bar dataKey="사망자수" fill="#E71D36" />
         </BarChart>
       </ResponsiveContainer>
     </div>
-  );
+  )
 }
-
-
-
 
