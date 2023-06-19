@@ -11,4 +11,14 @@
 
 body{
   font-family: 'Pretendard-Regular';
+  background-color: rgb(206, 238, 250);
+}
+
+.recharts-wrapper{
+  width: 1000px;
+  margin: 0 auto;
+}
+
+.react-kakao-maps-sdk-map-container{
+  margin-top: 20px;
 }
