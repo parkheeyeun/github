@@ -1,16 +1,18 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
 import './App.css';
+import { Map, MapMarker, MapInfoWindow } from 'react-kakao-maps-sdk';
 import {
-  BarChart,
+  ComposedChart,
+  Line,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer
+  Legend
 } from "recharts";
 
+import Header from './components/Header'
 
 const incheon = [
   { siDo: 28, goGun: 245, name: '계양구' },
@@ -23,11 +25,11 @@ const incheon = [
   { siDo: 28, goGun: 110, name: '중구' },
 ]
 
-const years = [2020, 2021, 2022]
+const years = [2020, 2019, 2018];
 
 function fetchData(city, year) {
 
-  const endPoint = 'http://apis.data.go.kr/B552061/schoolzoneChild/getRestSchoolzoneChild'
+  const endPoint = 'https://apis.data.go.kr/B552061/frequentzoneBicycle/getRestFrequentzoneBicycle'
   const serviceKey = process.env.REACT_APP_SERVICE_KEY;
   const type = 'json';
   const numOfRows = 10;
@@ -35,11 +37,14 @@ function fetchData(city, year) {
 
   const promise = fetch(`${endPoint}?serviceKey=${serviceKey}&searchYearCd=${year}&siDo=${city.siDo}&guGun=${city.goGun}&type=${type}&numOfRows=${numOfRows}&pageNo=${pageNo}`)
     .then(res => {
+      // console.log(res)
       if (!res.ok) {
         throw res;
       }
-      return res.json();
+      return res.json()
     })
+
+  // console.log(promise)
 
   return promise;
 }
@@ -51,7 +56,7 @@ export default function App() {
 
   return (
     <>
-      <h1 className='text-center py-8 text-2xl font-semibold'>인천 스쿨존 사고조회</h1>
+      <Header />
       <div id="select-year" className='w-full ml-4 my-4'>
         <select className='border border-gray-300 w-28 h-8 text-lg' onChange={(e) => setYear(e.target.value)}>
           {years.map(year => (
@@ -60,9 +65,9 @@ export default function App() {
         </select>
       </div>
       <div className='flex justify-center'>
-        {incheon.map(city => (
-          <button className='border-2 border-black rounded p-4 m-1 hover:bg-sky-300'
-            key={city.id}
+        {incheon.map((city) => (
+          <button className='border-2 border-black rounded p-4 m-1 hover:bg-sky-100'
+            key={city.goGun}
             onClick={() => setCity(city)}
           >
             {city.name}
@@ -107,9 +112,10 @@ function Dashboard({ city, year }) {
 
   return (
     <>
-      <h1>{year}년 {city.name} 사고조회 결과</h1>
       {data.totalCount > 0 ? (
         <>
+          <KakaoMap accidents={data.items.item} />
+          <h1 className='m-4'>{year}년 {city.name} 사고조회 결과</h1>
           <Rechart accidents={data.items.item} />
         </>
       ) : (
@@ -119,12 +125,44 @@ function Dashboard({ city, year }) {
   )
 }
 
+function KakaoMap({ accidents }) {
+
+  const mapInfoWindows = accidents.map(accident => (
+    <MapInfoWindow
+      key={accident.la_crd}
+      position={{ lat: accident.la_crd, lng: accident.lo_crd }}
+      removable={true}
+    >
+      <div style={{ padding: "5px", color: "#000" }}>
+        {accident.spot_nm.split(' ')[2]}
+      </div>
+    </MapInfoWindow>
+  ))
+
+  return (
+    <Map
+      center={{ lat: accidents[0].la_crd, lng: accidents[0].lo_crd }}
+      style={{ width: "100%", height: "450px" }}
+      level={5}
+    >
+      <MapMarker
+        position={{lat: accidents[0].la_crd, lng: accidents[0].lo_crd}}
+      >
+      </MapMarker>
+
+      {mapInfoWindows}
+    </Map>
+  )
+}
+
 function Rechart({ accidents }) {
+
   const chartData = accidents.map(accident => {
 
     return {
-      name: accident.spot_nm.split(' '),
+      name: accident.spot_nm.split(' ')[2],
       발생건수: accident.occrrnc_cnt,
+      부상자수: accident.wnd_dnv_cnt,
       중상자수: accident.se_dnv_cnt,
       사망자수: accident.dth_dnv_cnt
     }
@@ -132,23 +170,23 @@ function Rechart({ accidents }) {
 
   return (
     <div style={{ height: "300px" }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          width={500}
-          height={300}
-          data={chartData}
-          margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="발생건수" fill="#009966" />
-          <Bar dataKey="중상자수" fill="#ffcb05" />
-          <Bar dataKey="사망자수" fill="#E71D36" />
-        </BarChart>
-      </ResponsiveContainer>
+      <ComposedChart
+        width={1000}
+        height={400}
+        data={chartData}
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid stroke="#f5f5f5" strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="발생건수" fill="#a840ff" />
+        <Bar dataKey="부상자수" fill="#009966" />
+        <Bar dataKey="중상자수" fill="#ffcb05" />
+        <Bar dataKey="사망자수" fill="#E71D36" />
+        <Line type="monotone" dataKey="발생건수" stroke="#ff7300" />
+      </ComposedChart>
     </div>
   )
 }
