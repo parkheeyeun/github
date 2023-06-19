@@ -25,12 +25,12 @@ const incheon = [
   { siDo: 28, goGun: 110, name: '중구' },
 ]
 
-const years = [2020,2019,2018];
+const years = [2021, 2020, 2019, 2018];
 
 function fetchData(city, year) {
 
-  const endPoint = 'https://apis.data.go.kr/B552061/frequentzoneBicycle/getRestFrequentzoneBicycle'
-  const serviceKey = process.env.REACT_APP_SERVICE_KEY;
+  const endPoint = 'http://apis.data.go.kr/B552061/frequentzoneLg/getRestFrequentzoneLg'
+  const serviceKey = "VOUp56jiBd%2Bk9tSYhKWkxyYvltX%2BbgOLUPVKgorUTKUHBmpTVOSAEcwCeFD3zGe87x%2BDQN8II7kIUELICUggxA%3D%3D"
   const type = 'json';
   const numOfRows = 10;
   const pageNo = 1;
@@ -115,7 +115,7 @@ function Dashboard({ city, year }) {
       {data.totalCount > 0 ? (
         <>
           <KakaoMap accidents={data.items.item} />
-        <h1 className='m-4'>{year}년 {city.name} 사고조회 결과</h1>
+          <h1 className='m-4'>{year}년 {city.name} 사고다발 구역 사고결과</h1>
           <Rechart accidents={data.items.item} />
         </>
       ) : (
@@ -133,7 +133,8 @@ function KakaoMap({ accidents }) {
       position={{ lat: accident.la_crd, lng: accident.lo_crd }}
       removable={true}
     >
-      <div style={{ padding: "5px", color: "#000" }}>
+
+      <div style={{ padding: "5px", color: "#000"}}>
         {accident.spot_nm.split(' ')[2]}
       </div>
     </MapInfoWindow>
@@ -142,9 +143,14 @@ function KakaoMap({ accidents }) {
   return (
     <Map
       center={{ lat: accidents[0].la_crd, lng: accidents[0].lo_crd }}
-      style={{ width: "100%", height: "450px" }}
+      style={{ width: "100%", height: "450px", marginTop: "10px"}}
       level={5}
     >
+      <MapMarker
+        position={{lat: accidents[0].la_crd, lng: accidents[0].lo_crd}}
+      >
+      </MapMarker>
+
       {mapInfoWindows}
     </Map>
   )
@@ -153,14 +159,14 @@ function KakaoMap({ accidents }) {
 function Rechart({ accidents }) {
 
   const chartData = accidents.map(accident => {
-    var words = accident.spot_nm.split(' ')
-    const spot = words.slice(2,words.length)
-    const place = spot[0].concat(spot[1])
-    console.log(place)
+    const arr = accident.spot_nm.split(' ')
+    const spot = arr[2].concat(arr[3])
+    // console.log(spot)
 
     return {
-      name: place,
+      name: spot,
       발생건수: accident.occrrnc_cnt,
+      부상자수: accident.wnd_dnv_cnt,
       중상자수: accident.se_dnv_cnt,
       사망자수: accident.dth_dnv_cnt
     }
@@ -179,8 +185,8 @@ function Rechart({ accidents }) {
         <YAxis />
         <Tooltip />
         <Legend />
-        <Bar dataKey="발생건수" fill="#a840ff" />
-        <Bar dataKey="부상자수" fill="#009966" />
+        <Bar dataKey="발생건수" fill="#009966" />
+        <Bar dataKey="부상자수" fill="#a840ff" />
         <Bar dataKey="중상자수" fill="#ffcb05" />
         <Bar dataKey="사망자수" fill="#E71D36" />
         <Line type="monotone" dataKey="발생건수" stroke="#ff7300" />
